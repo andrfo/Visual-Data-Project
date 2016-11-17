@@ -6,13 +6,8 @@ import math
 import random
 
 
-def greyscale(img):
-    return ((img[:, :, 0]*0.2126 + img[:, :, 1]*0.7152 + img[:, :, 2]*0.0722))
-
-
 image = misc.imread("./images/difficult01.png")
-laplacian = np.array([[0, -1, 0], [-1, 4, -1], [0, -1, 0]])
-pixelsInRegion = np.zeros_like(image)
+regionImage = np.zeros_like(image)
 
 def getNeighbours(point):
     r = []
@@ -49,34 +44,39 @@ def makeRegion(img, seed, T):
     while(len(candidates) > 0):
         current = candidates.popleft()
         I = img[current[0], current[1]]
-        if(difference(seedIntensity, I) > T):
+        if(difference(seedIntensity, I) < T):
             for p in getNeighbours(current):
                 if p not in region and p not in candidates:
                     candidates.append(p)
             region.append(current)
-    return region
+    makeImage(region)
 
 #applies the grown regions on an empty image
-def makeImage(regions):
-    img = np.zeros_like(image)
-    colors = []
-    for r in regions:
-        colors.append([random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)])
-
-    for list in regions:
-        color = colors.pop()
-        for point in list:
-            img[point[0], point[1]] = color
-    return img
+def makeImage(region):
+    color = [random.randint(1, 255), random.randint(1, 255), random.randint(1, 255)]
+    for point in region:
+        regionImage[point[0], point[1]] = color
 
 #makes regions from a set of seeds
 def makeRegions(startSeed, T):
-    regions = []
-    regions.append(makeRegion(image, startSeed, T))
+    makeRegion(image, startSeed, T)
+    complete = True
+    counter = 0
+    while(complete):
+        try:
+            for y in range(len(image)):
+                for x in range(len(image[0])):
+                    if (regionImage[y][x][0] == 0 and regionImage[y][x][1] == 0 and regionImage[y][x][1] == 0):
+                        makeRegion(image, [x, y], T)
+                        counter += 1
+                        raise ValueError
+            complete = False
+        except ValueError as e:
+            print(str(e))
+            print(counter)
+            pass
 
 
-def makeSeeds(img, T):
-    pass
 
 
 
@@ -85,11 +85,8 @@ print(len(image))
 print(len(image[0]))
 
 
-threshold = 20
-#s = makeSeeds(image, threshold)
-#print(len(s))
-
-#RGImage = makeImage(makeRegions(s, threshold))
+threshold = 60
+makeRegions([10, 10], threshold)
 
 
 
@@ -99,7 +96,7 @@ plt.imshow(image, cmap=plt.cm.gray)
 plt.title("org image")
 
 plt.subplot(122)
-plt.imshow(getEdges(image, 20), cmap=plt.cm.gray)
+plt.imshow(regionImage, cmap=plt.cm.gray)
 plt.title("RG image")
 
 plt.show()
